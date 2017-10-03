@@ -6689,6 +6689,61 @@ public final class Settings {
             Secure.WIFI_WATCHDOG_PING_TIMEOUT_MS;
 
         /**
+         * Whether to show the battery bar
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR = "statusbar_battery_bar";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_COLOR = "statusbar_battery_bar_color";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_THICKNESS =
+                "statusbar_battery_bar_thickness";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_STYLE = "statusbar_battery_bar_style";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_ANIMATE = "statusbar_battery_bar_animate";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_CHARGING_COLOR =
+                "statusbar_battery_bar_charging_color";
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_BATTERY_LOW_COLOR =
+                "statusbar_battery_bar_battery_low_color";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_ENABLE_CHARGING_COLOR =
+                "statusbar_battery_bar_enable_charging_color";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_BLEND_COLOR = "statusbar_battery_bar_blend_color";
+
+        /**
+         * @hide
+         */
+        public static final String STATUSBAR_BATTERY_BAR_BLEND_COLOR_REVERSE =
+                "statusbar_battery_bar_blend_color_reverse";
+
+        /**
          * Checks if the specified app can modify system settings. As of API
          * level 23, an app cannot modify system settings unless it declares the
          * {@link android.Manifest.permission#WRITE_SETTINGS}

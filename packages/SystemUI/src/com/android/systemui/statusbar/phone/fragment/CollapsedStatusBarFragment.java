@@ -163,6 +163,7 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
     private List<String> mBlockedIcons = new ArrayList<>();
     private Map<Startable, Startable.State> mStartableStates = new ArrayMap<>();
 
+    private View mBatteryBar;
     private View mLogoImage;
 
     private final OngoingCallListener mOngoingCallListener = new OngoingCallListener() {
@@ -365,6 +366,7 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
                 new MultiSourceMinAlphaController(mNetworkTrafficHolderEnd);
         mClockController = mStatusBar.getClockController();
         mOngoingCallChip = mStatusBar.findViewById(R.id.ongoing_call_chip);
+        mBatteryBar = mStatusBar.findViewById(R.id.battery_bar);
         mLogoImage = mStatusBar.findViewById(R.id.statusbar_logo);
         showEndSideContent(false);
         showClock(false);
@@ -678,6 +680,7 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
     }
 
     private void hideEndSideContent(boolean animate) {
+        animateHide(mBatteryBar, animate);
         if (!animate) {
             mEndSideAlphaController.setAlpha(/*alpha*/ 0f, SOURCE_OTHER);
             mNetworkTrafficStartAlphaController.setAlpha(/*alpha*/ 0f, SOURCE_OTHER);
@@ -696,6 +699,7 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
     }
 
     private void showEndSideContent(boolean animate) {
+        animateShow(mBatteryBar, animate);
         if (!animate) {
             mEndSideAlphaController.setAlpha(1f, SOURCE_OTHER);
             mNetworkTrafficStartAlphaController.setAlpha(1f, SOURCE_OTHER);
