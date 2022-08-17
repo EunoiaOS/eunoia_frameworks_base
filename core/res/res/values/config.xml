@@ -6990,4 +6990,7 @@
     <!-- List of protected packages that require biometric authentication for modification
          (Disable, force-stop or uninstalling updates). -->
     <string-array name="config_biometric_protected_package_names" translatable="false" />
+
+    <!-- Whether to cancel fingerprint operation if not idle -->
+    <bool name="config_fpCancelIfNotIdle">false</bool>
 </resources>
