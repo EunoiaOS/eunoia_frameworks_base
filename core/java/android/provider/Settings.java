@@ -17833,6 +17833,12 @@ public final class Settings {
         };
 
         /**
+         * The amount of time in milliseconds before bluetooth is turned off
+         * @hide
+         */
+        public static final String BLUETOOTH_OFF_TIMEOUT = "bluetooth_off_timeout";
+
+        /**
          * The amount of time in milliseconds before wifi is turned off
          * @hide
          */
