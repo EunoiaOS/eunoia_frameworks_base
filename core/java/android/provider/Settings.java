@@ -12643,6 +12643,15 @@ public final class Settings {
          * @hide
          */
         public static final String V_TO_U_RESTORE_DENYLIST = "v_to_u_restore_denylist";
+
+        /**
+         * Our GameSpace can't write to device_config directly [GTS]
+         * Use this as intermediate to pass device_config property
+         * from our GameSpace to com.android.server.app.GameManagerService
+         * so we can set the device_config property from there.
+         * @hide
+         */
+        public static final String GAME_OVERLAY = "game_overlay";
     }
 
     /**
