@@ -574,10 +574,10 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
                 && !(mStatusBarStateController.getState() == StatusBarState.KEYGUARD
                         && headsUpVisible)) {
             View clockView = mClockController.getClock();
-            boolean isRightClock = clockView.getId() == R.id.clock_right;
+            boolean notLeftClock = clockView.getId() != R.id.clock;
             // Hide everything
             return new StatusBarVisibilityModel(
-                    /* showClock= */ isRightClock,
+                    /* showClock= */ notLeftClock,
                     /* showNotificationIcons= */ false,
                     /* showOngoingCallChip= */ false,
                     /* showSystemInfo= */ false);
