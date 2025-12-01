@@ -187,6 +187,12 @@ public class BatteryBar extends RelativeLayout {
                 mSettingsObserver,
                 UserHandle.USER_ALL
         );
+        cr.registerContentObserver(
+                Settings.System.getUriFor("statusbar_battery_bar_blend_color_reverse"),
+                false,
+                mSettingsObserver,
+                UserHandle.USER_ALL
+        );
     }
 
     private void unregisterSettingsObserver() {
@@ -253,15 +259,22 @@ public class BatteryBar extends RelativeLayout {
                 UserHandle.USER_CURRENT
         );
 
+        int reversed = Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "statusbar_battery_bar_blend_color_reverse",
+                0,
+                UserHandle.USER_CURRENT
+        );
+
         if (mCharging) return charging;
         if (blend != 0) {
-            return getBlendColor(normal, low, level);
+            return getBlendColor(normal, low, reversed, level);
         } else {
             return level <= BATTERY_LOW_VALUE ? low : normal;
         }
     }
 
-    private int getBlendColor(int fullColor, int lowColor, int level) {
+    private int getBlendColor(int fullColor, int lowColor, int reversed, int level) {
         float[] newColor = new float[3];
         float[] empty = new float[3];
         float[] full = new float[3];
@@ -270,10 +283,17 @@ public class BatteryBar extends RelativeLayout {
         Color.colorToHSV(lowColor, empty);
         int emptyAlpha = Color.alpha(lowColor);
         float blendFactor = level/100f;
-        if (empty[0] > full[0]) {
-                full[0] += 360f;
+        if (reversed != 0) {
+            if (empty[0] < full[0]) {
+                empty[0] += 360f;
+            }
+            newColor[0] = empty[0] - (empty[0]-full[0])*blendFactor;
+        } else {
+            if (empty[0] > full[0]) {
+                    full[0] += 360f;
+            }
+            newColor[0] = empty[0] + (full[0]-empty[0])*blendFactor;
         }
-        newColor[0] = empty[0] + (full[0]-empty[0])*blendFactor;
         if (newColor[0] > 360f) {
             newColor[0] -= 360f;
         } else if (newColor[0] < 0) {
