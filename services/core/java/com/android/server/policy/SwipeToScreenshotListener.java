@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The PixelExperience Project
+ * Copyright (C) 2023 The  Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,132 +17,183 @@
 package com.android.server.policy;
 
 import android.content.Context;
+import android.hardware.input.InputManager;
+import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.provider.Settings;
-import android.util.Log;
 import android.util.DisplayMetrics;
+import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.WindowManagerPolicyConstants.PointerEventListener;
 
-public class SwipeToScreenshotListener implements PointerEventListener {
-    private static final String TAG = "SwipeToScreenshotListener";
-    private static final int THREE_GESTURE_STATE_NONE = 0;
-    private static final int THREE_GESTURE_STATE_DETECTING = 1;
-    private static final int THREE_GESTURE_STATE_DETECTED_FALSE = 2;
-    private static final int THREE_GESTURE_STATE_DETECTED_TRUE = 3;
-    private static final int THREE_GESTURE_STATE_NO_DETECT = 4;
-    private boolean mBootCompleted;
-    private Context mContext;
-    private boolean mDeviceProvisioned = false;
-    private float[] mInitMotionY;
-    private int[] mPointerIds;
-    private int mThreeGestureState = THREE_GESTURE_STATE_NONE;
-    private int mThreeGestureThreshold;
-    private int mThreshold;
-    private final Callbacks mCallbacks;
-    DisplayMetrics mDisplayMetrics;
+import androidx.annotation.NonNull;
 
-    public SwipeToScreenshotListener(Context context, Callbacks callbacks) {
-        mPointerIds = new int[3];
-        mInitMotionY = new float[3];
+public final class SwipeToScreenshotListener implements PointerEventListener {
+
+    private static final int STATE_IDLE       = 0;
+    private static final int STATE_TRACKING   = 1;
+    private static final int STATE_CONSUMED   = 2;
+    private static final int STATE_FAILED     = 3;
+
+    private static final int REQUIRED_POINTERS = 3;
+    private static final long MAX_START_TIME_MS = 400;
+
+    private final Context mContext;
+    private final Callbacks mCallbacks;
+    private final InputManager mInputManager;
+    private final DisplayMetrics mMetrics;
+
+    private final int mTouchSlopPx;
+    private final int mTriggerDistancePx;
+
+    private final int[] mPointerIds = new int[REQUIRED_POINTERS];
+    private final float[] mStartY = new float[REQUIRED_POINTERS];
+
+    private int mState = STATE_IDLE;
+    private boolean mBootCompleted;
+    private boolean mDeviceProvisioned;
+
+    public SwipeToScreenshotListener(
+            @NonNull Context context,
+            @NonNull Callbacks callbacks) {
+
         mContext = context;
         mCallbacks = callbacks;
-        mDisplayMetrics = mContext.getResources().getDisplayMetrics();
-        mThreshold = (int) (50.0f * mDisplayMetrics.density);
-        mThreeGestureThreshold = mThreshold * 3;
+        mInputManager = context.getSystemService(InputManager.class);
+        mMetrics = context.getResources().getDisplayMetrics();
+
+        mTouchSlopPx = dpToPx(16);
+        mTriggerDistancePx = dpToPx(140);
     }
 
     @Override
     public void onPointerEvent(MotionEvent event) {
-        if (!mBootCompleted) {
-            mBootCompleted = SystemProperties.getBoolean("sys.boot_completed", false);
+        if (!isReady()) return;
+
+        final int action = event.getActionMasked();
+
+        if (action == MotionEvent.ACTION_DOWN) {
+            reset();
             return;
         }
-        if (!mDeviceProvisioned) {
-            mDeviceProvisioned = Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.DEVICE_PROVISIONED, 0) != 0;
-            return;
-        }
-        if (event.getAction() == 0) {
-            changeThreeGestureState(THREE_GESTURE_STATE_NONE);
-        } else if (mThreeGestureState == THREE_GESTURE_STATE_NONE && event.getPointerCount() == 3) {
-            if (checkIsStartThreeGesture(event)) {
-                changeThreeGestureState(THREE_GESTURE_STATE_DETECTING);
-                for (int i = 0; i < 3; i++) {
-                    mPointerIds[i] = event.getPointerId(i);
-                    mInitMotionY[i] = event.getY(i);
-                }
+
+        if (mState == STATE_IDLE && event.getPointerCount() == REQUIRED_POINTERS) {
+            if (canStartGesture(event)) {
+                startTracking(event);
             } else {
-                changeThreeGestureState(THREE_GESTURE_STATE_NO_DETECT);
+                mState = STATE_FAILED;
             }
+            return;
         }
-        if (mThreeGestureState == THREE_GESTURE_STATE_DETECTING) {
-            if (event.getPointerCount() != 3) {
-                changeThreeGestureState(THREE_GESTURE_STATE_DETECTED_FALSE);
+
+        if (mState != STATE_TRACKING) return;
+
+        if (event.getPointerCount() != REQUIRED_POINTERS) {
+            mState = STATE_FAILED;
+            return;
+        }
+
+        if (action == MotionEvent.ACTION_MOVE) {
+            handleMove(event);
+        }
+    }
+
+    private void startTracking(MotionEvent event) {
+        mState = STATE_TRACKING;
+        for (int i = 0; i < REQUIRED_POINTERS; i++) {
+            mPointerIds[i] = event.getPointerId(i);
+            mStartY[i] = event.getY(i);
+        }
+    }
+
+    private void handleMove(MotionEvent event) {
+        float dySum = 0f;
+        float dxSum = 0f;
+
+        for (int i = 0; i < REQUIRED_POINTERS; i++) {
+            int index = event.findPointerIndex(mPointerIds[i]);
+            if (index < 0) {
+                mState = STATE_FAILED;
                 return;
             }
-            if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
-                float distance = 0.0f;
-                int i = 0;
-                while (i < 3) {
-                    int index = event.findPointerIndex(mPointerIds[i]);
-                    if (index < 0 || index >= 3) {
-                        changeThreeGestureState(THREE_GESTURE_STATE_DETECTED_FALSE);
-                        return;
-                    } else {
-                        distance += event.getY(index) - mInitMotionY[i];
-                        i++;
-                    }
-                }
-                if (distance >= ((float) mThreeGestureThreshold)) {
-                    changeThreeGestureState(THREE_GESTURE_STATE_DETECTED_TRUE);
-                    mCallbacks.onSwipeThreeFinger();
-                }
-            }
+
+            dySum += event.getY(index) - mStartY[i];
+            dxSum += Math.abs(event.getX(index)
+                    - event.getHistoricalX(index, 0));
+        }
+
+        // Early direction lock → kill scroll ASAP
+        if (dySum > mTouchSlopPx && dySum > dxSum * 1.5f) {
+            cancelTouch();
+        }
+
+        if (dySum >= mTriggerDistancePx) {
+            mState = STATE_CONSUMED;
+            cancelTouch();
+            mCallbacks.onSwipeThreeFinger();
         }
     }
 
-    private void changeThreeGestureState(int state) {
-        if (mThreeGestureState != state){
-            mThreeGestureState = state;
-            boolean shouldEnableProp = mThreeGestureState == THREE_GESTURE_STATE_DETECTED_TRUE ||
-                mThreeGestureState == THREE_GESTURE_STATE_DETECTING;
-            try {
-                SystemProperties.set("sys.android.screenshot", shouldEnableProp ? "true" : "false");
-            } catch(Exception e) {
-                Log.e(TAG, "Exception when setprop", e);
-            }
-        }
-    }
-
-    private boolean checkIsStartThreeGesture(MotionEvent event) {
-        if (event.getEventTime() - event.getDownTime() > 500) {
+    private boolean canStartGesture(MotionEvent event) {
+        if (event.getEventTime() - event.getDownTime() > MAX_START_TIME_MS) {
             return false;
         }
-        int height = mDisplayMetrics.heightPixels;
-        int width = mDisplayMetrics.widthPixels;
-        float minX = Float.MAX_VALUE;
-        float maxX = Float.MIN_VALUE;
+
+        final int height = mMetrics.heightPixels;
+        final float bottomReject = height - dpToPx(48);
+
         float minY = Float.MAX_VALUE;
         float maxY = Float.MIN_VALUE;
-        for (int i = 0; i < event.getPointerCount(); i++) {
-            float x = event.getX(i);
+
+        for (int i = 0; i < REQUIRED_POINTERS; i++) {
             float y = event.getY(i);
-            if (y > ((float) (height - mThreshold))) {
-                return false;
-            }
-            maxX = Math.max(maxX, x);
-            minX = Math.min(minX, x);
-            maxY = Math.max(maxY, y);
+            if (y > bottomReject) return false;
             minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
         }
-        if (maxY - minY <= mDisplayMetrics.density * 150.0f) {
-            return maxX - minX <= ((float) (width < height ? width : height));
-        }
-        return false;
+
+        return (maxY - minY) <= dpToPx(150);
     }
 
-    interface Callbacks {
+    private boolean isReady() {
+        if (!mBootCompleted) {
+            mBootCompleted = SystemProperties.getBoolean(
+                    "sys.boot_completed", false);
+            return false;
+        }
+
+        if (!mDeviceProvisioned) {
+            mDeviceProvisioned = Settings.Global.getInt(
+                    mContext.getContentResolver(),
+                    Settings.Global.DEVICE_PROVISIONED, 0) != 0;
+            return false;
+        }
+        return true;
+    }
+
+    private void reset() {
+        mState = STATE_IDLE;
+    }
+
+    private void cancelTouch() {
+        long now = SystemClock.uptimeMillis();
+        MotionEvent cancel = MotionEvent.obtain(
+                now, now,
+                MotionEvent.ACTION_CANCEL,
+                0f, 0f, 0);
+
+        cancel.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        mInputManager.injectInputEvent(
+                cancel,
+                InputManager.INJECT_INPUT_EVENT_MODE_ASYNC);
+        cancel.recycle();
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * mMetrics.density);
+    }
+
+    public interface Callbacks {
         void onSwipeThreeFinger();
     }
 }
