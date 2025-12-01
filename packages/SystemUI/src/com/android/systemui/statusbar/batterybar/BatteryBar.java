@@ -181,6 +181,12 @@ public class BatteryBar extends RelativeLayout {
                 mSettingsObserver,
                 UserHandle.USER_ALL
         );
+        cr.registerContentObserver(
+                Settings.System.getUriFor("statusbar_battery_bar_blend_color"),
+                false,
+                mSettingsObserver,
+                UserHandle.USER_ALL
+        );
     }
 
     private void unregisterSettingsObserver() {
@@ -240,8 +246,43 @@ public class BatteryBar extends RelativeLayout {
                 UserHandle.USER_CURRENT
         );
 
+        int blend = Settings.System.getIntForUser(
+                mContext.getContentResolver(),
+                "statusbar_battery_bar_blend_color",
+                0,
+                UserHandle.USER_CURRENT
+        );
+
         if (mCharging) return charging;
-        return level <= BATTERY_LOW_VALUE ? low : normal;
+        if (blend != 0) {
+            return getBlendColor(normal, low, level);
+        } else {
+            return level <= BATTERY_LOW_VALUE ? low : normal;
+        }
+    }
+
+    private int getBlendColor(int fullColor, int lowColor, int level) {
+        float[] newColor = new float[3];
+        float[] empty = new float[3];
+        float[] full = new float[3];
+        Color.colorToHSV(fullColor, full);
+        int fullAlpha = Color.alpha(fullColor);
+        Color.colorToHSV(lowColor, empty);
+        int emptyAlpha = Color.alpha(lowColor);
+        float blendFactor = level/100f;
+        if (empty[0] > full[0]) {
+                full[0] += 360f;
+        }
+        newColor[0] = empty[0] + (full[0]-empty[0])*blendFactor;
+        if (newColor[0] > 360f) {
+            newColor[0] -= 360f;
+        } else if (newColor[0] < 0) {
+            newColor[0] += 360f;
+        }
+        newColor[1] = empty[1] + ((full[1]-empty[1])*blendFactor);
+        newColor[2] = empty[2] + ((full[2]-empty[2])*blendFactor);
+        int newAlpha = (int) (emptyAlpha + ((fullAlpha-emptyAlpha)*blendFactor));
+        return Color.HSVToColor(newAlpha, newColor);
     }
 
     private void startAnim() {
