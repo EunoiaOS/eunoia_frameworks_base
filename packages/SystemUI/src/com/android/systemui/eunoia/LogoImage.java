@@ -28,23 +28,19 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.android.systemui.Dependency;
-import com.android.systemui.plugins.DarkIconDispatcher;
-import com.android.systemui.plugins.DarkIconDispatcher.DarkReceiver;
 import com.android.systemui.R;
 
 import java.util.ArrayList;
 
 import lineageos.providers.LineageSettings;
 
-public abstract class LogoImage extends ImageView implements DarkReceiver {
+public abstract class LogoImage extends ImageView {
 
     private Context mContext;
 
     private boolean mAttached;
 
     private boolean mShowLogo;
-    private int mTintColor = Color.WHITE;
 
     class SettingsObserver extends ContentObserver {
 
@@ -90,8 +86,6 @@ public abstract class LogoImage extends ImageView implements DarkReceiver {
         SettingsObserver observer = new SettingsObserver(new Handler());
         observer.observe();
         updateSettings();
-
-        ((DarkIconDispatcher) Dependency.get(DarkIconDispatcher.class)).addDarkReceiver((DarkReceiver) this);
     }
 
     @Override
@@ -101,21 +95,13 @@ public abstract class LogoImage extends ImageView implements DarkReceiver {
             return;
 
         mAttached = false;
-        ((DarkIconDispatcher) Dependency.get(DarkIconDispatcher.class)).removeDarkReceiver((DarkReceiver) this);
-    }
-
-    @Override
-    public void onDarkChanged(ArrayList<Rect> areas, float darkIntensity, int tint) {
-        mTintColor = DarkIconDispatcher.getTint(areas, this, tint);
-        if (mShowLogo && isLogoVisible()) {
-            updateLogo();
-        }
     }
 
     public void updateLogo() {
         Drawable drawable = mContext.getResources().getDrawable(R.drawable.ic_sblogo_eunoia);
 
-        drawable.setTint(mTintColor);
+        setImageTintList(null);
+        clearColorFilter();
         setImageDrawable(drawable);
     }
 
