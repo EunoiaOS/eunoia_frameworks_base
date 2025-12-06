@@ -163,6 +163,8 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
     private List<String> mBlockedIcons = new ArrayList<>();
     private Map<Startable, Startable.State> mStartableStates = new ArrayMap<>();
 
+    private View mLogoImage;
+
     private final OngoingCallListener mOngoingCallListener = new OngoingCallListener() {
         @Override
         public void onOngoingCallStateChanged(boolean animate) {
@@ -363,6 +365,7 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
                 new MultiSourceMinAlphaController(mNetworkTrafficHolderEnd);
         mClockController = mStatusBar.getClockController();
         mOngoingCallChip = mStatusBar.findViewById(R.id.ongoing_call_chip);
+        mLogoImage = mStatusBar.findViewById(R.id.statusbar_logo);
         showEndSideContent(false);
         showClock(false);
         initOperatorName();
@@ -762,10 +765,12 @@ public class CollapsedStatusBarFragment extends Fragment implements CommandQueue
 
     public void hideNotificationIconArea(boolean animate) {
         animateHide(mNotificationIconAreaInner, animate);
+        animateHide(mLogoImage, animate);
     }
 
     public void showNotificationIconArea(boolean animate) {
         animateShow(mNotificationIconAreaInner, animate);
+        animateShow(mLogoImage, animate);
     }
 
     public void hideOperatorName(boolean animate) {

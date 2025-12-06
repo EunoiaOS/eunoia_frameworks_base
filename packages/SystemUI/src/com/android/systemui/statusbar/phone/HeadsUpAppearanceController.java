@@ -27,6 +27,7 @@ import androidx.annotation.NonNull;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.widget.ViewClippingUtil;
 import com.android.systemui.dagger.qualifiers.RootView;
+import com.android.systemui.eunoia.LogoImage;
 import com.android.systemui.flags.FeatureFlagsClassic;
 import com.android.systemui.plugins.DarkIconDispatcher;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
@@ -112,6 +113,8 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
     private final FeatureFlagsClassic mFeatureFlags;
     private final HeadsUpNotificationIconInteractor mHeadsUpNotificationIconInteractor;
 
+    private final LogoImage mLogoImage;
+
     @VisibleForTesting
     @Inject
     public HeadsUpAppearanceController(
@@ -156,6 +159,7 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
         mOperatorNameViewOptional = operatorNameViewOptional;
         mDarkIconDispatcher = darkIconDispatcher;
         mClockController = statusBarView.getClockController();
+        mLogoImage = statusBarView.findViewById(R.id.statusbar_logo);
 
         mView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
@@ -278,6 +282,8 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
                     hide(mClockView, View.INVISIBLE);
                 }
                 mOperatorNameViewOptional.ifPresent(view -> hide(view, View.INVISIBLE));
+                if (mLogoImage.getVisibility() != View.GONE)
+                    mLogoImage.setVisibility(View.INVISIBLE);
             } else {
                 if (!notLeftClock) {
                     show(mClockView);
@@ -286,6 +292,8 @@ public class HeadsUpAppearanceController extends ViewController<HeadsUpStatusBar
                 hide(mView, View.GONE, () -> {
                     updateParentClipping(true /* shouldClip */);
                 });
+                if (mLogoImage.getVisibility() != View.GONE)
+                    mLogoImage.setVisibility(View.VISIBLE);
             }
             // Show the status bar icons when the view gets shown / hidden
             if (mStatusBarStateController.getState() != StatusBarState.SHADE) {
