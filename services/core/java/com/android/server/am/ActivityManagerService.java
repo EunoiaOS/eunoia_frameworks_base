@@ -8819,6 +8819,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
         mAppErrors.loadAppsNotReportingCrashesFromConfig(res.getString(
                 com.android.internal.R.string.config_appsNotReportingCrashes));
+        mSwipeToScreenshotObserver.registerObserver();
     }
 
     /**

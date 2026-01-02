@@ -6763,15 +6763,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
 
         mLineageHardware = LineageHardwareManager.getInstance(mContext);
-        mSwipeToScreenshot = new SwipeToScreenshotListener(mContext, new SwipeToScreenshotListener.Callbacks() {
-            @Override
-            public void onSwipeThreeFinger() {
-                mHandler.removeCallbacks(mScreenshotRunnable);
-                mScreenshotRunnable.setScreenshotType(TAKE_SCREENSHOT_FULLSCREEN);
-                mScreenshotRunnable.setScreenshotSource(SCREENSHOT_KEY_OTHER);
-                mHandler.post(mScreenshotRunnable);
-            }
-        });
         // Ensure observe happens in systemReady() since we need
         // LineageHardwareService to be up and running
         mSettingsObserver.observe();
