@@ -17,6 +17,11 @@
 package com.android.systemui.statusbar.pipeline.mobile.domain.interactor
 
 import android.content.Context
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
+import android.os.UserHandle
+import android.provider.Settings
 import com.android.internal.telephony.flags.Flags
 import com.android.settingslib.SignalIcon.MobileIconGroup
 import com.android.settingslib.graph.SignalDrawable
@@ -42,6 +47,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -131,6 +137,8 @@ interface MobileIconInteractor {
 
     /** True when in carrier network change mode */
     val carrierNetworkChangeActive: StateFlow<Boolean>
+
+    val shouldShowFourgIcon: StateFlow<Boolean>
 }
 
 /** Interactor for a single mobile connection. This connection _should_ have one subscription ID */
@@ -159,6 +167,44 @@ class MobileIconInteractorImpl(
 
     override val carrierNetworkChangeActive: StateFlow<Boolean> =
         connectionRepository.carrierNetworkChangeActive
+
+    private val SHOW_FOURG_ICON_URI =
+        Settings.System.getUriFor(Settings.System.SHOW_FOURG_ICON)
+
+    private val _shouldShowFourgIcon =
+        MutableStateFlow(readShowFourgIcon())
+
+    override val shouldShowFourgIcon: StateFlow<Boolean> =
+        _shouldShowFourgIcon
+    
+    private val showFourgObserver =
+        object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                _shouldShowFourgIcon.value = readShowFourgIcon()
+            }
+        }
+
+    init {
+        context.contentResolver.registerContentObserver(
+            Settings.System.getUriFor(Settings.System.SHOW_FOURG_ICON),
+            false,
+            showFourgObserver,
+            UserHandle.USER_ALL
+        )
+    }
+
+    private fun readShowFourgIcon(): Boolean {
+        return Settings.System.getIntForUser(
+            context.contentResolver,
+            Settings.System.SHOW_FOURG_ICON,
+            0,
+            UserHandle.USER_CURRENT
+        ) == 1
+    }
+
+    fun destroy() {
+        context.contentResolver.unregisterContentObserver(showFourgObserver)
+    }
 
     // True if there exists _any_ icon override for this carrierId. Note that overrides can include
     // any or none of the icon groups defined in MobileMappings, so we still need to check on a

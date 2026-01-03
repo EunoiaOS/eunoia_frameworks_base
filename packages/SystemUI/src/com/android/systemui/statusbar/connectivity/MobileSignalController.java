@@ -23,6 +23,7 @@ import android.database.ContentObserver;
 import android.net.NetworkCapabilities;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.provider.Settings.Global;
 import android.telephony.CellSignalStrength;
 import android.telephony.CellSignalStrengthCdma;
@@ -155,6 +156,7 @@ public class MobileSignalController extends SignalController<MobileState, Mobile
             @Override
             public void onChange(boolean selfChange) {
                 updateTelephony();
+                setIconTo4G();
             }
         };
         mMobileStatusTracker = mobileStatusTrackerFactory.createTracker(mMobileCallback);
@@ -171,6 +173,12 @@ public class MobileSignalController extends SignalController<MobileState, Mobile
     void setAirplaneMode(boolean airplaneMode) {
         mCurrentState.airplaneMode = airplaneMode;
         notifyListenersIfNecessary();
+    }
+
+    private void setIconTo4G() {
+        mConfig = Config.readConfig(mContext);
+        setConfiguration(mConfig);
+        notifyListeners();
     }
 
     void setUserSetupComplete(boolean userSetup) {
@@ -201,6 +209,9 @@ public class MobileSignalController extends SignalController<MobileState, Mobile
                 true, mObserver);
         mContext.getContentResolver().registerContentObserver(Global.getUriFor(
                 Global.MOBILE_DATA + mSubscriptionInfo.getSubscriptionId()),
+                true, mObserver);
+        mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(
+                Settings.System.SHOW_FOURG_ICON),
                 true, mObserver);
     }
 
