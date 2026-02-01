@@ -551,8 +551,8 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         final boolean drawPercentOnly = mShowPercentMode == MODE_ESTIMATE ||
                 showBatteryPercent == 2;
         boolean shouldShow =
-                (drawPercentOnly && (!drawPercentInside || isCharging()) ||
-                getBatteryStyle() == BATTERY_STYLE_TEXT);
+                (drawPercentOnly && (!drawPercentInside || isCharging()) &&
+                getBatteryStyle() != BATTERY_STYLE_CIRCLE);
         shouldShow = shouldShow && !mBatteryStateUnknown;
 
         if (shouldShow) {
